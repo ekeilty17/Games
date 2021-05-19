@@ -1,122 +1,45 @@
-def getRow(L,i):
-    if i < 0 or i > 8:
-        raise TypeError("Index out of range")
-    out = L[i]
-    #return out
-    return [x for x in out if x != 0]
+import numpy as np
 
-def getCol(L,j):
-    if j < 0 or j > 8:
-        raise TypeError("Index out of range")
-    out = []
-    for row in L:
-        out += [row[j]]
-    #return out
-    return [x for x in out if x != 0]
+class SudokuBoard(object):
 
-def getSquare(L,s):
-    # 0 1 2
-    # 3 4 5
-    # 6 7 8
-    if s < 0 or s > 8:
-        raise TypeError("Index out of range")
-    #unfortunately, I think this is the best way to do it
-    out = []
-    if s == 0:
-        out = [ L[0][0], L[0][1], L[0][2],
-                L[1][0], L[1][1], L[1][2],
-                L[2][0], L[2][1], L[2][2] ]
-    elif s == 1:
-        out = [ L[0][3], L[0][4], L[0][5],
-                L[1][3], L[1][4], L[1][5],
-                L[2][3], L[2][4], L[2][5] ]
-    elif s == 2:
-        out = [ L[0][6], L[0][7], L[0][8],
-                L[1][6], L[1][7], L[1][8],
-                L[2][6], L[2][7], L[2][8] ]
-    elif s == 3:
-        out = [ L[3][0], L[3][1], L[3][2],
-                L[4][0], L[4][1], L[4][2],
-                L[5][0], L[5][1], L[5][2] ]
-    elif s == 4:
-        out = [ L[3][3], L[3][4], L[3][5],
-                L[4][3], L[4][4], L[4][5],
-                L[5][3], L[5][4], L[5][5] ]
-    elif s == 5:
-        out = [ L[3][6], L[3][7], L[3][8],
-                L[4][6], L[4][7], L[4][8],
-                L[5][6], L[5][7], L[5][8] ]
-    elif s == 6:
-        out = [ L[6][0], L[6][1], L[6][2],
-                L[7][0], L[7][1], L[7][2],
-                L[8][0], L[8][1], L[8][2] ]
-    elif s == 7:
-        out = [ L[6][3], L[6][4], L[6][5],
-                L[7][3], L[7][4], L[7][5],
-                L[8][3], L[8][4], L[8][5] ]
-    elif s == 8:
-        out = [ L[6][6], L[6][7], L[6][8],
-                L[7][6], L[7][7], L[7][8],
-                L[8][6], L[8][7], L[8][8] ]
-    #return out
-    return [x for x in out if x != 0]
+    def __init__(self, board, check_consistent=True):
+        
+        # some error checking
+        self.board_correct_structure(board)
+        self.board = np.array(board)    # will be a 9x9 numpy array
+
+        if check_consistent:
+            if not self.is_consistent():
+                raise ValueError("This board contains inconsistencies")
 
 
-def isValidSudokuBoard(L):
-    #This function assumes it's a 9x9 array of integers ... not gonne do those checks again
-    for i in range(9):
-        row = getRow(L,i)
-        col = getCol(L,i)
-        square = getSquare(L,i)
-        #Basically just need to check if any repeats exist
-        if list(sorted(row)) != list(sorted(set(row))) or list(sorted(col)) != list(sorted(set(col))) or list(sorted(square)) != list(sorted(set(square))):
-            #print row,list(set(row))
-            #print col,list(set(col))
-            #print square,list(set(square))
-            return False
-    return True
-
-class board():
-
-    def __init__(self, L):
-
-        """Make sure L is a 9x9 array or integers"""
-        if type(L) != list:
+    @staticmethod
+    def board_correct_structure(board):
+        if not type(board) in [list, np.ndarray]:
             raise TypeError("Input is not a list")
-        if len(L) != 9:
+        
+        if len(board) != 9:
             raise TypeError("Number of rows in input does not equal 9")
 
         for i in range(9):
-            if len(L[i]) != 9:
+            if len(board[i]) != 9:
                 raise TypeError("Number of columns in input does not equal 9")
             for j in range(9):
-                if L[i][j] not in range(0,10):
-                    #The zero indicates an empty cell
-                    raise TypeError("Input list does not contain integers between 0 and 9 (inclusive)")
+                if board[i][j] not in range(10):
+                    raise ValueError("Input list does not contain integers between 0 and 9 (inclusive)")
 
-        if not isValidSudokuBoard(L):
-            raise TypeError("Not a valid Sudoku board")
-        self.store = L
+    #def __getitem__(self, index):
+    #    return self.board[index]
 
-    def copy(self):
-        out = []
-        for row in self.store:
-            out += [list(row)]
-        return out
-
-    def new(self):
-        return board(self.copy())
-
-    def Display(self):
-        out =  "\t \033[90m   1 2 3   4 5 6   7 8 9\033[0m\n"
-        out += "\t \033[90m  -----------------------\033[0m\n"
+    def __repr__(self):
+        out = "\t \033[90m  -----------------------\033[0m\n"
         for i in range(9):
             temp = '\t\033[90m' + str(i+1) + ' |\033[0m '
             for j in range(9):
-                if self.store[i][j] == 0:
+                if self.board[i][j] == 0:
                     temp += '  '
                 else:
-                    temp += str(self.store[i][j]) + ' '
+                    temp += str(self.board[i][j]) + ' '
                 if j == 2 or j == 5:
                     temp += '\033[90m|\033[0m '
                 elif j == 8:
@@ -125,20 +48,144 @@ class board():
             if i == 2 or i == 5:
                 out += "\t\033[90m  |-------+-------+-------|\033[0m\n"
             if i == 8:
-                out += "\t\033[90m   -----------------------\033[0m"
-        print out
+                out += "\t\033[90m   -----------------------\033[0m\n"
+        out +=  "\t \033[90m   1 2 3   4 5 6   7 8 9\033[0m\n"
         return out
 
-    def isComplete(self):
-        for i in range(9):
-            for j in range(9):
-                if self.store[i][j] == 0:
-                    return False
+    def copy(self):
+        return SudokuBoard( self.board.copy(), check_consistent=False )
+
+    def check_bounds(i):
+        return i in range(1, 10)
+    
+
+
+    """ basic functionality to use the Sudoku Board """
+
+    def move(self, r, c, val):
+        self.board[r-1, c-1] = val
+
+    # Due to Sudoku convensions, when calling these functions 
+    # we will index from 1 to 9 instead of 0 to 8
+    def get_cell(self, r, c):
+        return self.board[r-1, c-1]
+
+    def get_row(self, r, include_self=True):
+        return self.board[r-1, :]
+
+    def get_col(self, c, include_self=True):
+        return self.board[:, c-1]
+
+    # because these will mostly be used for iterating I thought this would be simpler to label
+    # the cells in each 3x3 square as follows
+    #       1   2   3
+    #       4   5   6
+    #       7   8   9
+    
+    @staticmethod
+    def coord2flat(r, c):
+        x = (r-1) // 3
+        y = (c-1) // 3
+        s = 3*x + y
+        return s+1
+    
+    @staticmethod
+    def flat2coord(s):
+        x = (s-1) // 3
+        y = (s-1) % 3
+        r = 2 + 3*x
+        c = 2 + 3*y
+        return r, c
+    
+    # again we index from 1 to 9
+    def get_neighbor_indices(self, r, c, include_self=True):
+        neighbor_idx = [
+            (r-1, c-1), (r-1, c), (r-1, c+1),
+            (r,   c-1), (r, c),   (r, c+1),
+            (r+1, c-1), (r+1, c), (r+1, c+1)
+        ]
+        neighbor_idx = filter(lambda t: t[0] in range(1, 10) and t[1] in range(1, 10), neighbor_idx)
+        if not include_self:
+            neighbor_idx = filter(lambda t: t != (r, c), neighbor_idx)
+        return list(neighbor_idx)
+
+    def get_neighbor_values(self, r, c, include_self=True):
+        neighbor_idx = self.get_neighbor_indices(r, c, include_self=include_self)
+        return [self.get_cell(r, c) for r, c in neighbor_idx]
+
+    # I've created this intermediate function because it will provide useful functionality later
+    def get_square_indexes(self, *args, include_self=True):
+        
+        if len(args) == 1:
+            s = args[0]
+        elif len(args) == 2:
+            r, c = args
+            s = self.coord2flat(r, c)
+        else:
+            raise ValueError(f"Too many arguments. Expected 1 or 2, got {len(args)}")
+        
+        
+        r_center, c_center = self.flat2coord(s)
+        square_idx = self.get_neighbor_indices(r_center, c_center)
+        if not include_self:
+            square_idx = filter(lambda t: t != (r, c), square_idx)
+
+        return square_idx
+    
+    # there are 2 ways to identify a square, either using index s or using the coordinate (r, c)
+    # I've included both functionaity to make things easier
+    def get_square(self, *args):
+
+        if len(args) == 1:
+            s = args[0]
+        elif len(args) == 2:
+            r, c = args
+            s = self.coord2flat(r, c)
+        else:
+            raise ValueError(f"Too many arguments. Expected 1 or 2, got {len(args)}")
+
+        r_center, c_center = self.flat2coord(s)
+        square_idx = self.get_neighbor_indices(r_center, c_center, include_self=True)
+        return [self.get_cell(r, c) for r, c in square_idx]
+
+
+    # returns values from top left to bottom right
+    def get_diagonal(self, k=0):
+        return np.diag(self.board, k)
+    
+    # returns values from bottom left to top right
+    def get_skew_diagonal(self, k=0):
+        return np.flip(np.diag(np.flip(self.board, axis=1), k))
+
+
+    """ Verfication of solution """
+
+    def is_complete(self):
+        return not np.any(self.board == 0)
+    
+    @staticmethod
+    def has_repeats(L):
+        return list(sorted(L)) != list(sorted(set(L)))
+
+    # This might not be super efficient, but it's only a 9x9 board
+    def is_consistent(self, diagonals=False):
+        # check if any row, col, or square has a repeated value
+        for i in range(1, 10):
+            row = list(filter(lambda x: x != 0, self.get_row(i)))
+            col = list(filter(lambda x: x != 0, self.get_col(i)))
+            square = list(filter(lambda x: x != 0, self.get_square(i)))
+            if self.has_repeats(row) or self.has_repeats(col) or self.has_repeats(square):
+                return False
+        
+        # sometimes sudokus also do the diagonals, so check if those have any repeats
+        if diagonals:
+            diagonal = list(filter(lambda x: x != 0, self.get_diagonal()))
+            skew_diagonal = list(filter(lambda x: x != 0, self.get_skew_diagonal()))
+            if self.has_repeats(diagonal) or self.has_repeats(skew_diagonal):
+                return False
+        
+        # if all checks successed return true
         return True
 
-    # Need this to match the general search tree syntax
-    def move_search(self, L):
-        self.move(L[0], L[1])
-
-    def move(self, num, pos):
-        self.store[pos[0]][pos[1]] = num
+    def is_solution(self):
+        return self.is_complete() and self.is_consistent()

@@ -1,5 +1,5 @@
 # The general search tree class a specific implementation of the tree class
-class general_search_tree(object):
+class GeneralSearchTree(object):
     def __init__(self,x):
         self.val = x
         self.children = []
@@ -9,6 +9,11 @@ class general_search_tree(object):
         self.children += [T]
         T.parent = self
         return True
+
+    def __repr__(self):
+        # Return Type:  string
+        # OPTIONAL
+        return self.val.__repr__()
 
     """ Helper Methods """
     # Some are optional and some the user MUST define an implementation
@@ -49,11 +54,6 @@ class general_search_tree(object):
         # REQUIRED
         raise NotImplementedError("The method not implemented")
 
-    def Display(self):
-        # Return Type:  Void
-        # OPTIONAL
-        pass
-
     def search(self):
         # If a node is not properly defined
         # of if we get to the end of the search tree
@@ -61,7 +61,7 @@ class general_search_tree(object):
             return False
 
         # Display Node. This is optional.
-        self.Display()
+        print(self)
 
         # Break case...solution found
         if self.isSolution():
@@ -74,7 +74,7 @@ class general_search_tree(object):
         # Getting set of next possible states
         # Edges is a list of all possible Edges
         #   Edges take the parent node to the child node
-        #   For example if the game was chess, an edge would be moving a pawn to a2 to a4
+        #   For example if the game was chess, an edge would be moving a pawn from a2 to a4
         #   and the evolve function is responsible for handling that logic
         # child = evolve(parent, Edges[i])
         Edges = self.getEdges()

@@ -2,13 +2,13 @@
 
 One of the most famous puzzles in the world and a game that I played a lot when I was younger. I created a program that allows users to play Sudoku as well as an engine that will solve any Sudoku puzzle.
 
-In order to play execute `python play.py`. The file is set to having the engine solve what is considered the hardest Sudoku puzzle ever created by default. If you wish to use my program to play Sudoku yourself (although I don't recommend it, there exists apps with much better UI) then comment-out the function `AI()` and uncomment the function `Sudoku()`.
+In order to play execute `python play.py`. The file is set to having the engine solve what is considered the hardest Sudoku puzzle ever created by default. You can also use my program to play Sudoku yourself (although I don't recommend it, there exists apps with much better UI).
 
 ## The Sudoku Solver
 
-I created 3 different Sudoku solvers. Each can solve a more difficult puzzle than the last. I named them `beginner_AI()`, `intermediate_AI()`, and `expert_AI()`
+I created a Sudoku Solver that implements various logical solving methods. When the solver runs out of logical steps it "bifercates" or guesses a number and sees if a contradiction occurs. If one does not and finds a solution, since Sudokus are designed to have a unique solution, this must be THE solution. The bifercation is implemented using a depth-first search tree.
 
-### The Beginner and Intermediate Sudoku Solvers
+### Logical Techniques
 
 Simple Sudoku puzzles can be solved by just implementing the following 2 logical priciples (I'm not sure if these are official names, but this is what I have always called them). The beginner AI implement only the first (because that is usually the first method people figure out), and the intermediate AI implements both. Rather than explain them in words I will just show the logical deduction.
 
@@ -85,11 +85,11 @@ Another way of thinking of this is we are eliminated candidate numbers. Looking 
 |     |     |     |     |     |     |     |     |     |     |     |
 
 
-### The Expert Sudoku Solver
+### Bifercation
 
-With the exception of the principle of the "Naked Pair" (which is relatively simple, but would be a nightmare to code) the advanced techniques of Sudoku get really complex. They mostly revolve around getting a list of candidate moves for each cell and then using complex logical deductions in order to eliminate candidate moves. Instead of trying to code those, I took a different approach.
+With the exception of the principle of the "Naked Pair" (which is relatively simple, but would be annoying to code) the advanced techniques of Sudoku get really complex. They mostly revolve around getting a list of candidate moves for each cell and then using complex logical deductions in order to eliminate candidate moves. Instead of trying to code those, I took a different approach.
 
-For lack of a better term, the advanced AI solves the puzzles by contradiction. It implements the intermediate AI until the intermediate AI can't make any more moves. Then it finds cell with the least number of candidate moves (there usually exists one with just 2) and it guesses. We know that one of the candidate moves must be correct. If the guess leads to a contradiction (i.e. a cell that is empty but has zero candidate moves) then that must have been the wrong guess and it tries the next candidate move. If it completes the puzzle with no constradictions, then we found the correct solution.
+For lack of a better term, the bifercation solves the puzzles by contradiction. It implements the basic logical techniques until it can't make any more moves. Then it finds cell with the least number of candidate moves (there usually exists one with just 2) and it guesses. We know that one of the candidate moves must be correct. If the guess leads to a contradiction (i.e. a cell that is empty but has zero candidate moves) then that must have been the wrong guess and it tries the next candidate move. If it completes the puzzle with no constradictions, then we found the correct solution (since Sudoku's are designed to have a unique solution).
 
 Formally, this is called a Depth-First Search, but this is a special case because of 2 facts:
 
