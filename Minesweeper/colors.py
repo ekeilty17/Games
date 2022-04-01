@@ -1,0 +1,17 @@
+WHITE       = (255, 255, 255)
+LIGHT_GREY  = (192, 192, 192)
+GREY        = (128, 128, 128)
+BLACK       = (  0,   0,   0)
+
+ROYAL_BLUE  = (  0,  31, 241)
+GREEN       = ( 54, 123,  33)
+RED         = (235,  50,  35)
+DARK_BLUE   = (  0,  10, 121)
+MAROON      = (115,  20,  13)
+DARK_CYAN   = ( 54, 125, 127)
+YELLOW      = (255, 254,  84)
+DIM_YELLOW  = (121, 120,  36)
+DIM_RED     = (123,  22,  13)
+
+COLORS = [  LIGHT_GREY, ROYAL_BLUE, GREEN, RED, DARK_BLUE, MAROON, DARK_CYAN, BLACK, GREY, WHITE,   # minesweeper colors (0 - 9)
+            YELLOW, DIM_YELLOW, DIM_RED]    # extra colors (10 - 12)

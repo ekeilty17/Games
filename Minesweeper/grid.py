@@ -14,8 +14,10 @@ class MinesweeperGrid(object):
         self.HEIGHT = height
         self.WIDTH = width
         self.NUMBER_OF_MINES = number_of_mines
+        self.verbose = verbose
 
-        self.construct_grid()
+        # instantiates self.mine_indices and self.grid
+        self.initialize_grid()
 
     def __repr__(self):
         output = ""
@@ -50,17 +52,23 @@ class MinesweeperGrid(object):
         return neighbor_indices_in_range
 
     # `no_mines` is a list of indices that cannot contain a mine
-    def get_random_mine_indices(self, no_mines=None):
-        if no_mines is None:
-            no_mines = []
-        possible_indices = [(i, j) for j in range(self.WIDTH) for i in range(self.HEIGHT) if (i, j) not in no_mines]
+    def get_random_mine_indices(self, avoid_indicies=None):
+        if avoid_indicies is None:
+            avoid_indicies = []
+        possible_indices = [(i, j) for j in range(self.WIDTH) for i in range(self.HEIGHT) if (i, j) not in avoid_indicies]
         mine_indices = random.sample(possible_indices, self.NUMBER_OF_MINES)
         return set(mine_indices)
 
-    def construct_grid(self, no_mines=None):
-        if no_mines is None:
-            no_mines = []
-        self.mine_indices = self.get_random_mine_indices(no_mines)
+    def initialize_grid(self, first_click_index=None):
+        # To make the game more fun, we always ensure the first click is a cell with no mines 
+        # in the cell itself and in the neighboring cells
+        avoid_indicies = []
+        if first_click_index is not None:
+            i, j = first_click_index
+            avoid_indicies = self.get_neighbor_indices(i, j, include_self=True)
+        
+        # randomly placing mines everywhere else
+        self.mine_indices = self.get_random_mine_indices(avoid_indicies=avoid_indicies)
 
         # blank grid
         self.grid = [[None for j in range(self.WIDTH)] for i in range(self.HEIGHT)]
@@ -71,43 +79,60 @@ class MinesweeperGrid(object):
                 neighbor_indices = self.get_neighbor_indices(i, j, include_self=True)
                 mine_count = len(neighbor_indices.intersection(self.mine_indices))
                 contains_mine = (i, j) in self.mine_indices
-                self.grid[i][j] = MinesweeperCell(mine=contains_mine, count=mine_count, visible=False, flagged=False)
-
-    def toggle_flag(self, i, j):
-        cell = self.grid[i][j]
-        cell.flag = (not cell.is_flagged())
-    
-    def make_visible(self, i, j):
-        cell = self.grid[i][j]
+                self.grid[i][j] = MinesweeperCell(mine=contains_mine, count=mine_count)
         
-        # is a cell is not visible
-        if not cell.is_visible():
-            # make it visible
-            cell.visible = True
+        # we need to keep track of these things to know when the game is over
+        self.number_of_flags = 0
+        self.no_mine_indices = set([(i, j) for j in range(self.WIDTH) for i in range(self.HEIGHT)]) - self.mine_indices
+        self.visible_cell_indices = set()
+
+
+    def left_click(self, i, j):
+        cell = self.grid[i][j]
+
+        # Prevents cyclic calls to neighboring cells
+        if cell.is_visible():
+            return
+
+        # preform the left click
+        cell.action("left click")
+
+        # if the left click resulted in the cell becoming visible, then we need to check some stuff
+        if cell.is_visible():
+            self.visible_cell_indices.add( (i, j) )
+
             # if the cell has no neighboring mines
             if cell.count == 0:
                 # then we recursively make its neighbors visible
                 neighbor_indices = self.get_neighbor_indices(i, j, include_self=False)
                 for i, j in neighbor_indices:
-                    self.make_visible(i, j)
+                    self.left_click(i, j)
+        # If we've toggle between "flagged" and "question mark" then we need to update the flag count
+        else:
+            self.number_of_flags += (cell.current_state == "flagged") - (cell.previous_state == "flagged")
     
-    # This will resolve the neighboring cells based on the flags the user has put down
-    def chord(self, i, j):
+    # This implements chordings, which will resolve the neighboring cells based on the flags the user has put down
+    # It is assumed that this function is only called on cells that are already visible
+    def middle_click(self, i, j):
         cell = self.grid[i][j]
 
-        if not cell.is_visible():
-            self.make_visible(i, j)
+        if cell.is_hidden():
             return
         
         neighbor_indices = self.get_neighbor_indices(i, j, include_self=False)
-        flagged_neighbor_indices = set(filter(lambda n_cell: n_cell.is_flagged(), neighbor_indices))
+        flagged_neighbor_indices = set(filter(lambda t: self.grid[t[0]][t[1]].is_flagged(), neighbor_indices))
         unflagged_neighbor_indices = (neighbor_indices - flagged_neighbor_indices)
         
         # we only chord if the number of flags matches the number mine count
-        if len(flagged_neighbors) == cell.count:
-            for n_cell in unflagged_neighbors:
-                n_cell.make_visible()
+        if len(flagged_neighbor_indices) == cell.count:
+            for x, y in unflagged_neighbor_indices:
+                self.left_click(x, y)
 
+    def right_click(self, i, j):
+        cell = self.grid[i][j]
+        cell.action("right click")
+        self.number_of_flags += (cell.current_state == "flagged") - (cell.previous_state == "flagged")
+    
     def get_exposed_mines(self):
         exposed_mine_indices = set()
         for i, j in self.mine_indices:
@@ -125,12 +150,3 @@ if __name__ == "__main__":
 
     G = MinesweeperGrid(**expert)
     print(G)
-    
-    """
-    while True:
-        G = MinesweeperGrid(**expert)
-        counts = [G.grid[i][j].count for i in range(G.HEIGHT) for j in range(G.WIDTH) if not G.grid[i][j].contains_mine()]
-        if 6 in counts:
-            print(G)
-            break
-    """
