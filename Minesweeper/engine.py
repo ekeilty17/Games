@@ -33,6 +33,7 @@ class MinesweeperEngine(object):
         "crossed out mine": MINE_CROSSED_OUT
     }
 
+
     """ Stage 1: Initialize Game """
     # initializes my Minesweeper backend and the PyGame front end
     def __init__(self, height, width, number_of_mines, verbose=True):
@@ -187,6 +188,7 @@ class MinesweeperEngine(object):
         self.update_game_screen()
         pygame.display.flip()
 
+
     """ State 2: Get input from user and preform the correct action """
     # The possible actions are "nothing", "left down", "middle down", "rigth down", "left click", "middle click", and "right click" 
     def get_user_action_from_event(self, event):
@@ -323,14 +325,8 @@ class MinesweeperEngine(object):
             self.update_game_screen()
             pygame.display.flip()
 
-    """ State 3: Draw the updated state to the screen as effeiciently as possible """
-    # The true pixels in PyGame are smaller than the "pixels" used by my MineSweeper game
-    # This gets the PyGame rectangle that represents a "pixel" in my game
-    def get_pixel_rectangle(self, x, y, i, j):
-        x_absolute = self.CELL_WIDTH * i + x
-        y_absolute = self.CELL_HEIGHT * j + y
-        return (self.PIXEL_WIDTH * y_absolute, self.PIXEL_HEIGHT * x_absolute, self.PIXEL_WIDTH, self.PIXEL_HEIGHT)
 
+    """ State 3: Draw the updated state to the screen as effeiciently as possible """
     # some helper functions for `self.update_info_screen()`
     @staticmethod
     def concatenate_bitmaps(*digits):
@@ -358,6 +354,7 @@ class MinesweeperEngine(object):
                 digits.append( CLOCK_NUMBERS[int(c)] )
         return MinesweeperEngine.concatenate_bitmaps(*digits)
 
+    # some helper functions for `self.update_game_screen()`
     def get_cell_pixels(self, cell):
         cell_pixels = self.cell_bitmap[cell.current_state] 
         if cell.current_state == "number":
@@ -368,6 +365,13 @@ class MinesweeperEngine(object):
         for x in range(self.CELL_HEIGHT):
             for y in range(self.CELL_WIDTH):
                 pygame.draw.rect(self.game_screen, COLORS[cell_pixels[x][y]], self.get_pixel_rectangle(x, y, i, j))
+
+    # The true pixels in PyGame are smaller than the "pixels" used by my MineSweeper game
+    # This gets the PyGame rectangle that represents a "pixel" in my game
+    def get_pixel_rectangle(self, x, y, i, j):
+        x_absolute = self.CELL_WIDTH * i + x
+        y_absolute = self.CELL_HEIGHT * j + y
+        return (self.PIXEL_WIDTH * y_absolute, self.PIXEL_HEIGHT * x_absolute, self.PIXEL_WIDTH, self.PIXEL_HEIGHT)
 
     # This is what is redrawn to the info screen every frame
     def update_info_screen(self):
@@ -447,6 +451,7 @@ class MinesweeperEngine(object):
         self.full_screen.blit(self.game_screen, self.game_screen_topleft_position)
 
     
+    """ Stage 4: String all previous stages together """
     def run(self):
         
         # start game
@@ -501,6 +506,7 @@ class MinesweeperEngine(object):
 
         pygame.quit()
         quit()
+
 
 if __name__ == "__main__":
     beginner = {"height": 9, "width": 9, "number_of_mines": 10}
