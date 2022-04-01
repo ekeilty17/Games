@@ -1,5 +1,6 @@
 import random
 import string
+import argparse
 from termcolor import colored
 
 def get_pattern(guess, secret_word):
@@ -128,6 +129,15 @@ def play_wordle(word_of_the_day_dictionary, full_dictionary, hardmode=False, tri
     return False
 
 
+def get_args():
+    parser = argparse.ArgumentParser(description='Terminal Arguments for playing Wordle')
+    parser.add_argument('--hardmode', action='store_true', default=False, help='if included, hardmode will be on')
+    args = parser.parse_args()
+    return args
+
+def main(word_of_the_day_dictionary, full_dictionary, args): 
+    play_wordle(word_of_the_day_dictionary, full_dictionary, hardmode=args.hardmode)
+
 if __name__ == "__main__":
     with open('wordle_word_of_the_day_dictionary.txt', 'r') as f:
         lines = f.readlines()
@@ -136,5 +146,6 @@ if __name__ == "__main__":
     with open('wordle_full_dictionary.txt', 'r') as f:
         lines = f.readlines()
     full_dictionary = [word.strip() for word in lines]
-
-    play_wordle(word_of_the_day_dictionary, full_dictionary, hardmode=True)
+    
+    args = get_args()
+    main(word_of_the_day_dictionary, full_dictionary, args)
