@@ -1,5 +1,6 @@
 import random
 import math
+import argparse
 from termcolor import colored
 from collections import defaultdict
 
@@ -140,7 +141,7 @@ def normalize_distribution(distribution):
 def get_entropy(distribution):
     return -sum([p * math.log(p, 2) for p in distribution.values() if p > 0])
 
-def solve(dictionary, secret_word=None, start_word=None, word_length=5, tries=6, hardmode=False):
+def solve(dictionary, start_word=None, secret_word=None, word_length=5, tries=6, hardmode=False):
     candidates = list(dictionary)
     guesses = []
     
@@ -205,14 +206,29 @@ def solve(dictionary, secret_word=None, start_word=None, word_length=5, tries=6,
     print("The secret word was:", secret_word)
     return False
 
-
-def main(full_dictionary, word_of_the_day_dictionary, word_length=5, tries=6, hardmode=False):
-    secret_word = random.choice(word_of_the_day_dictionary)
-    secret_word = "nymph"
+def get_args():
+    # Commandline Arguments
+    parser = argparse.ArgumentParser(description='Terminal Arguments for solving Wordle')
     
-    start_word = "femmy"
-    solve(full_dictionary, secret_word, start_word, word_length, tries, hardmode)
-    #analyze_candidates(full_dictionary, word_of_the_day_dictionary, ["calmy", "story", "phony", "epoxy"], secret_word)
+    #parser.add_argument('start_word', type=str, help='the first word')
+    #parser.add_argument('secret_word', type=str, help='the secret word we are trying to find')
+    parser.add_argument('words', type=str, nargs='+', help='sequence of guesses to be analyzed, the first word is assumed to be the starting word and the last word is assumed to be the secret word')
+    parser.add_argument('--analyze', action='store_true', default=False, help='if included, the sequence of words will be assumed to be a complete game and be analyzed')
+    parser.add_argument('--hardmode', action='store_true', default=False, help='if included, hardmode will be on')
+
+    args = parser.parse_args()
+    return args
+
+def main(full_dictionary, word_of_the_day_dictionary, args):
+    if len(args.words) < 2:
+        raise ValueError("The number of words needs to be greater than 2, only received", len(args.words))
+    
+    start_word = args.words[0]
+    secret_word = args.words[-1] 
+    if args.analyze:
+        analyze_candidates(full_dictionary, word_of_the_day_dictionary, args.words, secret_word)
+    else:
+        solve(full_dictionary, start_word, secret_word, hardmode=args.hardmode)
 
 
 if __name__ == "__main__":
@@ -224,4 +240,5 @@ if __name__ == "__main__":
         lines = f.readlines()
     full_dictionary = [word.strip() for word in lines]
     
-    main(full_dictionary, word_of_the_day_dictionary, hardmode=False)
+    args = get_args()
+    main(full_dictionary, word_of_the_day_dictionary, args)
