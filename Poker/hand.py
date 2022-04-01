@@ -1,6 +1,4 @@
 from card import Card
-
-from collections import Counter
 import itertools
 
 class Hand(object):
@@ -294,6 +292,7 @@ if __name__ == "__main__":
     print(H.description)
     """
 
+    # This is from Project Euler and is a nice way to test that my hand comparison function works
     with open('p054_poker.txt', 'r') as f:
         lines = f.readlines()
     

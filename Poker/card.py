@@ -47,7 +47,8 @@ class Card(object):
         return f"{self.value}{self.suit}"
     
 
-    """ When we compare cards, we only care about the value, not the suit of the card  """
+    """ When we compare cards in Poker, we only care about the value, not the suit of the card  """
+    # TODO: some games do value some suits over others, so maybe I could add an option for that functionality
 
     def __eq__(self, other):
         if not isinstance(other, Card):
