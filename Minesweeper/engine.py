@@ -65,10 +65,6 @@ class MinesweeperEngine(object):
         self.full_screen = pygame.display.set_mode((self.BUFFER + self.WIDTH + self.BUFFER, self.BUFFER + self.HEIGHT + self.BUFFER))
         self.info_screen = pygame.Surface((self.INFO_WIDTH, self.INFO_HEIGHT))
         self.game_screen = pygame.Surface((self.GAME_WIDTH, self.GAME_HEIGHT))
-        
-        # I have to store the position of the screens
-        self.info_screen_topleft_position = (self.BUFFER + self.BORDER, self.BUFFER + self.BORDER)
-        self.game_screen_topleft_position = (self.BUFFER + self.BORDER, self.BUFFER + self.BORDER + self.INFO_HEIGHT + self.BORDER)
 
         # Drawing the static elements in the `full_screen` which will not change
         self.draw_game_container()
@@ -104,6 +100,11 @@ class MinesweeperEngine(object):
 
         self.WIDTH = self.BORDER + self.GAME_WIDTH + self.BORDER
         self.HEIGHT = self.BORDER + self.INFO_HEIGHT + self.BORDER + self.GAME_HEIGHT + self.BORDER
+
+        # The position of the screens
+        self.full_screen_topleft_position = (self.BUFFER, self.BUFFER)
+        self.info_screen_topleft_position = (self.BUFFER + self.BORDER, self.BUFFER + self.BORDER)
+        self.game_screen_topleft_position = (self.BUFFER + self.BORDER, self.BUFFER + self.BORDER + self.INFO_HEIGHT + self.BORDER)
 
         # face rectangle location
         # Note: This is very dependent on the fact that self.CELL_WIDTH = self.CELL_HEIGHT = 16
@@ -190,7 +191,7 @@ class MinesweeperEngine(object):
 
 
     """ State 2: Get input from user and preform the correct action """
-    # The possible actions are "nothing", "left down", "middle down", "rigth down", "left click", "middle click", and "right click" 
+    # The possible actions are "nothing", "left press", "middle press", "rigth press", "left click", "middle click", and "right click" 
     def get_user_action_from_event(self, event):
 
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -202,13 +203,13 @@ class MinesweeperEngine(object):
         if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEMOTION:
             # Middle Click Down while moving: changes the cells you are highlighting
             if self.left_mouse_down and self.right_mouse_down:
-                return "middle down"
+                return "middle press"
             # Left Click Down while moving: changes the cells you are highlighting
             if self.left_mouse_down:
-                return "left down"
+                return "left press"
             # Right Click Down while moving: still does nothing
             if self.right_mouse_down:
-                return "right down"
+                return "right press"
 
         if event.type == pygame.MOUSEBUTTONUP:
             # If either button is released, it is a Middle Click
@@ -260,7 +261,7 @@ class MinesweeperEngine(object):
     def handle_user_action_on_info_screen(self, absolute_pos, user_action):
         info_pos = self.absolute2relative(absolute_pos, self.info_screen_topleft_position)
         if self.is_click_on_face(info_pos):
-            if user_action == "left down":
+            if user_action == "left press":
                 self.face_pixels = SELECTED_FACE
             elif user_action == "left click":
                 self.initialize_game()
@@ -271,13 +272,13 @@ class MinesweeperEngine(object):
         game_pos = self.absolute2relative(absolute_pos, self.game_screen_topleft_position)
         i, j = self.pixel2index(game_pos)
 
-        if user_action == "left down":
+        if user_action == "left press":
             self.selected_cell_indices = [(i, j)]
             self.face_pixels = WOW_FACE
-        elif user_action == "middle down":
+        elif user_action == "middle press":
             self.selected_cell_indices = self.G.get_neighbor_indices(i, j, include_self=True)
             self.face_pixels = WOW_FACE
-        elif user_action == "right down":
+        elif user_action == "right press":
             self.face_pixels = WOW_FACE
         
         elif user_action == "left click":
