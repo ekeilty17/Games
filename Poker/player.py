@@ -8,7 +8,7 @@ class Player(object):
         self.money = money
     
 
-    def __repr__(self)
+    def __repr__(self):
         return f"{self.name}: {self.money}"
     
 
@@ -25,4 +25,3 @@ if __name__ == "__main__":
     common = [Card(card) for card in common]
 
     P = Player(hand, common)
-    P.get_best_hand()
