@@ -2,8 +2,7 @@ import os
 import math
 
 from card import CutCard
-from shoe import Shoe
-from player import Dealer
+from Players import Dealer
 from hand import Hand, DealerHand
 from action import Action
 
@@ -62,6 +61,7 @@ class BlackJackTable(object):
         out += "-" * 20 + '\n'
         return out
 
+
     """ Adding/Removing Players """
 
     def add_player(self, player, spot_index):
@@ -108,6 +108,7 @@ class BlackJackTable(object):
                 continue
 
             spot['player'].see_dealt_card(card)
+
 
     """ Game Procedure Logic """
 
@@ -475,8 +476,8 @@ class BlackJackTable(object):
 
 
 if __name__ == "__main__":
-    from player import Player, HumanPlayer, BasicStrategyPlayer, CardCountingPlayer
-    from shoe import FairShoe, LowRunningCountShoe, ConstantlyReshufflingShoe
+    from Players import HumanPlayer, BasicStrategyPlayer, CardCountingPlayer
+    from Shoes import FairShoe
 
     table_rules = {
         "min_bet": 10,
@@ -488,14 +489,18 @@ if __name__ == "__main__":
         "blackjack_multiplier": 1.5,
     }
 
-    Table = BlackJackTable(shoe=ConstantlyReshufflingShoe(), number_of_spots=8, verbose=True, **table_rules)
+    Table = BlackJackTable(shoe=FairShoe(), number_of_spots=8, verbose=True, **table_rules)
     print(Table)
     input("Press ENTER to continue ")
 
-    Eric = BasicStrategyPlayer(name="Eric", chips=0, **table_rules)
-    Table.add_player( Eric, 2 )
+    BS = BasicStrategyPlayer(name="BS", chips=0, **table_rules)
+    Table.add_player( BS, 2 )
 
-    Steven = CardCountingPlayer(name="Steven", chips=0, **table_rules)
-    Table.add_player( Steven, 5 )
+    CC = CardCountingPlayer(name="CC", chips=0, **table_rules)
+    Table.add_player( CC, 5 )
+    Table.add_player( CC, 6 )
+
+    Eric = HumanPlayer(name="Eric", chips=0, **table_rules)
+    Table.add_player( Eric, 3 )
     
     Table.play()
