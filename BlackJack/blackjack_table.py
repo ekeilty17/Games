@@ -18,19 +18,28 @@ class BlackJackTable(object):
 
         # This is what I would consider a high-quality BlackJack game that is realistic to find
         default_table_rules = {
+            # bets and cards
             "min_bet": 10,
             "max_bet": 1000,
             "number_of_decks": 6,
+
+            # dealing procedures
             "blackjack_multiplier": 1.5,    # never play a table where this is 1.2 (6:5)
             "hit_on_soft_17": False,        # dealer standing on soft 17 is better for the player
-            "hit_after_split_aces": False,
-            "double_after_split": True,
-            "double_after_split_aces": False,
+            "dealer_peaks_for_blackjack": True,    # If set to False, this is called ENHC rules
+            "insurance_and_even_money": True,
             "early_surrender": False,       # Almost no casino would allow this, it's too good for the player
+            
+            # player action
             "late_surrender": True,         # Many places actually don't allow this
-            "split_aces": True,
-            "resplit_aces": False,          # Almost no casino lets you resplit aces, it's too good for the player
-            "max_splits": 4,
+            "double_after_split": True,
+            "split_max": 4,                 # this means, we can have a max of 4 hands after splitting
+            # exceptions for Aces
+            "surrender_against_ace": True,
+            "split_max_aces": 2,
+            "hit_after_split_aces": False,
+            "double_after_split_aces": False,
+            
         }
         for rule, default_value in default_table_rules.items():
             self.table_rules[rule] = self.table_rules.get(rule, default_value)
@@ -70,7 +79,14 @@ class BlackJackTable(object):
 
     """ Adding/Removing Players """
 
-    def add_player(self, player, spot_index):
+    def add_player(self, player, spot_index=None):
+        # find the next available spot
+        if spot_index is None:
+            for i in range(len(self._spots)):
+                if self._spots[i]['player'] is None:
+                    self._spots[i]['player'] = player
+                    return
+            raise ValueError("There are no spots available")
         if self._spots[spot_index] is None:
             raise IndexError("Spot already occupied.")
         self._spots[spot_index]['player'] = player
@@ -300,7 +316,7 @@ class BlackJackTable(object):
             hand.resolve()
             return
 
-        allowed_actions = self.get_allowed_player_actions(hand, number_of_hands=len(spot['hands']))
+        allowed_actions = self.get_allowed_player_actions(hand, len(spot['hands']), dealer_upcard)
         action =  allowed_actions[0] if len(allowed_actions) == 1 else player.action(hand, dealer_upcard, allowed_actions)
 
         if action not in allowed_actions:
@@ -389,20 +405,15 @@ class BlackJackTable(object):
 
     # I had to move this to its over function because it made the logic much easier
     def _is_split_allowed(self, hand, number_of_hands):
-        if self.table_rules["max_splits"] < 2:
+        if self.table_rules["split_max"] < 2:
             return False
         if hand.cards[0].value != hand.cards[1].value:
             return False
-        
         if hand.cards[0].pip == "A":
-            if (number_of_hands == 1) and not self.table_rules['split_aces']:
-                return False
-            if (number_of_hands > 1) and not self.table_rules['resplit_aces']:
-                return False
-        
-        return number_of_hands < self.table_rules["max_splits"]
+            return number_of_hands < self.table_rules["split_max_aces"]
+        return number_of_hands < self.table_rules["split_max"]
 
-    def get_allowed_player_actions(self, hand, number_of_hands):
+    def get_allowed_player_actions(self, hand, number_of_hands, dealer_upcard):
         # len(hand) == 1 right after splits, the player automatically get another card
         if len(hand) == 1:
             return [Action.HIT]
@@ -412,21 +423,26 @@ class BlackJackTable(object):
             return [Action.STAND]
 
         allowed_actions = [Action.STAND, Action.HIT]
+
         if len(hand) == 2:
             
             # Action.DOUBLE
             if number_of_hands == 1:                    # if it's our first hand, we can double
                 allowed_actions.append(Action.DOUBLE)
-            elif hand.cards[0].pip != "A":              # we split aces
-                if self.table_rules["double_after_split_aces"]:
-                    allowed_actions.append(Action.DOUBLE)
-            else:                                       # we split something other than an ace
-                if self.table_rules["double_after_split"]:
-                    allowed_actions.append(Action.DOUBLE)
+            elif hand.cards[0].pip == "A" and self.table_rules["double_after_split_aces"]:              # we split aces
+                allowed_actions.append(Action.DOUBLE)
+            elif self.table_rules["double_after_split"]:
+                allowed_actions.append(Action.DOUBLE)
 
             # Action.SPLIT
             if self._is_split_allowed(hand, number_of_hands):
                 allowed_actions.append(Action.SPLIT)
+            
+            # Action.SURRENDER
+            if dealer_upcard.pip == "A" and self.table_rules["surrender_against_ace"]:
+                allowed_actions.append(Action.SURRENDER)
+            elif self.table_rules["late_surrender"]:
+                allowed_actions.append(Action.SURRENDER)
         
         return allowed_actions
 
@@ -519,15 +535,16 @@ class BlackJackTable(object):
         # if the dealer shows an A, the players are allowed to take insurance
         # if the player has a blackjack, then they can take even money (which is mathematically the same as insurance)
         if dealer_upcard.pip == 'A':
-            if self.table_rules["early_surrender"]:
+            if self.table_rules["early_surrender"] and self.table_rules["dealer_peaks_for_blackjack"]:
                 # TODO: implement early surrender
                 pass
 
             # ask for insurance/even money
-            self._ask_for_insurance_and_even_money(dealer_upcard)
+            if self.table_rules["insurance_and_even_money"]:
+                self._ask_for_insurance_and_even_money(dealer_upcard)
 
         # if the dealer has an A or any 10-valued card, they check if they have a blackjack
-        if dealer_upcard.pip in ['A', 'T', 'J', 'Q', 'K']:
+        if dealer_upcard.pip in ['A', 'T', 'J', 'Q', 'K'] and self.table_rules["dealer_peaks_for_blackjack"]:
             if self._dealer_hand.is_21():
                 
                 self._dealer_hand.reveal_hole_card()
@@ -536,10 +553,11 @@ class BlackJackTable(object):
                     print("Dealer has BlackJack :(")
                     input("Press ENTER to continue ")
 
-                self._pay_out_insurance()
-                if self._verbose:
-                    print(self)
-                    input("Press ENTER to continue ")
+                if self.table_rules["insurance_and_even_money"]:
+                    self._pay_out_insurance()
+                    if self._verbose:
+                        print(self)
+                        input("Press ENTER to continue ")
 
                 # No one gets action. Everyone loses unless they were dealt a 21, in which they push
                 self._evaluate_spots()
@@ -573,12 +591,10 @@ class BlackJackTable(object):
             print(self)
             input("Press ENTER to continue ")
 
-    def play(self, number_of_rounds=math.inf):
+    def play(self, number_of_rounds=math.inf, count_rounds=True):
         self._prepare_new_shoe()
         round_number = 0
-        while True:
-            if round_number > number_of_rounds:
-                break
+        while round_number < number_of_rounds:
             
             if self._last_hand:
                 if self._verbose:
@@ -594,7 +610,8 @@ class BlackJackTable(object):
                         continue
                     player.new_shoe()
 
-            print("Round:", round_number)
+            if count_rounds:
+                print("Round:", round_number+1)
             self._play_round()
             round_number += 1
 
@@ -604,15 +621,8 @@ if __name__ == "__main__":
     from Shoes import FairShoe, StackedShoe
 
     table_rules = {
-        "min_bet": 10,
-        "max_bet": 1000,
-        "hit_on_soft_17": False,
-        "double_after_split": True,
-        "late_surrender": True,
-        "number_of_decks": 6,
-        "blackjack_multiplier": 1.5,
-        "resplit_aces": False,
         "hit_after_split_aces": True,
+        "double_after_split_aces": True,
     }
 
     Table = BlackJackTable(shoe=StackedShoe(), number_of_spots=8, verbose=True, **table_rules)
