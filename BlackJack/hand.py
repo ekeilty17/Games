@@ -7,9 +7,10 @@ class Hand(object):
         self.bet = bet
         self.is_resolved = False
         self.is_doubled = False
-        self.is_split = False
+        self.insurance = False
+        self.even_money = False
     
-    # TODO: If player has soft 11, we probably shouldn't display at (11/21)
+    # TODO: If player has soft 11, we probably shouldn't display as (11/21)
     def __repr__(self):
         if len(self.cards) == 0:
             return f"${self.bet}:"
@@ -19,7 +20,9 @@ class Hand(object):
         total = self.get_total()
         str_totals = [str(total), str(total+10)] if self.is_soft_hand() else [str(total)]
         str_bet = f"${self.bet} + ${self.bet}" if self.is_doubled else f"${self.bet}"
-        return f"{str_bet}:\t{' '.join(str_cards)}\t({'/'.join(str_totals)})"
+        str_insurance = f"\n\t${self.bet//2}:\tInsurance" if self.insurance else ""
+        str_even_money = f"\n\tTook Even Money" if self.even_money else ""
+        return f"{str_bet}:\t{' '.join(str_cards)}\t({'/'.join(str_totals)}){str_insurance}{str_even_money}"
     
     def __len__(self):
         return len(self.cards)
@@ -54,9 +57,12 @@ class Hand(object):
 
     def double_down(self):
         self.is_doubled = True
+
+    def take_insurance(self):
+        self.insurance = True
     
-    def split(self):
-        self.is_split = True
+    def take_even_money(self):
+        self.even_money = True
 
     def is_busted(self):
         return self.get_total() > 21
@@ -69,6 +75,9 @@ class Hand(object):
     
     def is_21(self):
         return self.is_hard_21() or self.is_soft_21()
+    
+    def is_blackjack(self):
+        return len(self.cards) == 2 and self.is_21()
 
     """ Comparisons """
     def __eq__(self, other):

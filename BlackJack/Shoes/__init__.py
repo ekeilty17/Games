@@ -3,3 +3,4 @@ from .fair_shoe import FairShoe
 from .constantly_reshuffling_shoe import ConstantlyReshufflingShoe
 from .low_running_count_shoe import LowRunningCountShoe
 from .evenly_distributed_high_cards_shoe import EvenlyDistributedHighCardsShoe
+from .stacked_shoe import StackedShoe

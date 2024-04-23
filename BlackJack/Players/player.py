@@ -8,13 +8,15 @@ class Player(object):
     This is an abstract class mean to be implemented by various player strategies
     """
 
-    def __init__(self, name, chips=0, **table_rules):
+    def __init__(self, name, chips=0, insurance_frequency=0.5, even_money_frequency=0.5, **table_rules):
         self.name = name
 
         if type(chips) != int:
             raise TypeError(f"Expecting second argument to be an integer, got {chips} instead")
         
         self.chips = chips
+        self.insurance_frequency = insurance_frequency
+        self.even_money_frequency = even_money_frequency
         
         self.table_rules = table_rules
         default_table_rules = {
@@ -43,7 +45,6 @@ class Player(object):
     def bet_chips(self, chips):
         self.chips -= chips
         self.chip_history.append(self.chips)
-
     
     """ Functions to Implement """
 
@@ -54,14 +55,15 @@ class Player(object):
     # function called any time a card is dealt
     def see_dealt_card(self, card):
         pass
-
+    
     # function called if the player has the option for insurance
-    def take_insurance(self):
-        return False
+    def take_insurance(self, hand, dealer_upcard):
+        return random.random() < self.insurance_frequency
 
     # function called if the player has the option for even money
-    def take_even_money(self):
-        return False
+    # This is essentially the same thing as insurance, except you have 21
+    def take_even_money(self, hand, dealer_upcard):
+        return random.random() < self.even_money_frequency
     
     # function called to obtain players bet before they get their cards
     # this function SHOULD NOT modify self.chips (this will be done by a different object). Just return the bet amount
@@ -69,7 +71,7 @@ class Player(object):
         raise NotImplementedError("Not yet implemented...")
 
     # function called to obtain player action for their hand
-    def action(self, hand, dealer_card, allowed_actions):
+    def action(self, hand, dealer_upcard, allowed_actions):
         raise NotImplementedError("Not yet implemented...")
     
     # I don't feel like implementing these right now

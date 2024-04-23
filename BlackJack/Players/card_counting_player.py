@@ -208,10 +208,16 @@ class CardCountingPlayer(BasicStrategyPlayer):
         if card.value == 1 or card.value == 10:
             self.running_count -= 1
 
-    def action(self, hand, dealer_card, allowed_actions):
+    # We take insurance and even money at a true count of +3
+    def take_insurance(self, hand, dealer_upcard):
+        return self._calculate_true_count() >= 3
+    def take_even_money(self, hand, dealer_upcard):
+        return self._calculate_true_count() >= 3
+
+    def action(self, hand, dealer_upcard, allowed_actions):
         true_count = self._calculate_true_count()
         self._toggle_deviations(true_count)
-        action = super(CardCountingPlayer, self).action(hand=hand, dealer_card=dealer_card, allowed_actions=allowed_actions)
+        action = super(CardCountingPlayer, self).action(hand=hand, dealer_upcard=dealer_upcard, allowed_actions=allowed_actions)
         self._toggle_deviations(true_count)
         return action
     

@@ -286,11 +286,17 @@ class BasicStrategyPlayer(Player):
         splits_table = self._display_table(self._get_splits_table(), splits_row_labels, rotate_columns=True, rotate_rows=True)
         print(splits_table)
 
+    # Basic strategy says to never take insurrance nor even money
+    def take_insurance(self, hand, dealer_upcard):
+        return False
+    def take_even_money(self, hand, dealer_upcard):
+        return False
+
     def bet(self):
         return self.base_bet
 
-    def action(self, hand, dealer_card, allowed_actions):
-        d = dealer_card.value
+    def action(self, hand, dealer_upcard, allowed_actions):
+        d = dealer_upcard.value
         p = hand.get_total()
 
         splits = self.splits
@@ -304,7 +310,7 @@ class BasicStrategyPlayer(Player):
             return Action.SPLIT
         if (Action.DOUBLE in allowed_actions) and doubles[p-2][d-1]:
             return Action.DOUBLE
-        if hits[p-2][d-1]:
+        if (Action.HIT in allowed_actions) and hits[p-2][d-1]:
             return Action.HIT
         return Action.STAND
 

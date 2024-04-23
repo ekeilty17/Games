@@ -8,7 +8,7 @@ class Shoe(object):
 
     def __init__(self, number_of_decks=4, ultilized_shoe_percent=0.8, seed=None):
         self._number_of_decks = number_of_decks
-        self._ultilized_percent = ultilized_shoe_percent
+        self._ultilized_percent = ultilized_shoe_percent    # BlackJack apprentice calls this `penentration`
         self.cut_card = CutCard()
         
         self.seed = seed

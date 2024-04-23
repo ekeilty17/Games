@@ -11,10 +11,16 @@ class NeverBustPlayer(BasicStrategyPlayer):
     I've played around with this in simulations, you wouldn't believe how losing this is over the long run. You lose about 8x faster, and over many, many hands that compounds very quickly
     """
 
+    # A player like this is probably scared, so they might take insurance
+    def take_insurance(self, hand, dealer_upcard):
+        return True
+    def take_even_money(self, hand, dealer_upcard):
+        return True
+
     # bet() is implemented in BasicStrategyPlayer
 
-    def action(self, hand, dealer_card, allowed_actions):
-        basic_strategy_action = super(NeverBustPlayer, self).action(hand, dealer_card, allowed_actions)
+    def action(self, hand, dealer_upcard, allowed_actions):
+        basic_strategy_action = super(NeverBustPlayer, self).action(hand, dealer_upcard, allowed_actions)
 
         # I'll give this player the best odds they can have by telling them when they should at least be splitting and doubling since this never risks busting
         # I can't decide if this type of player would surrender...I suspect not

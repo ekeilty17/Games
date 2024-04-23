@@ -15,14 +15,22 @@ class BlackJackTable(object):
     def __init__(self, shoe, number_of_spots=8, verbose=False, **table_rules):
         
         self.table_rules = table_rules
+
+        # This is what I would consider a high-quality BlackJack game that is realistic to find
         default_table_rules = {
             "min_bet": 10,
             "max_bet": 1000,
-            "hit_on_soft_17": False,
-            "double_after_split": True,
-            "late_surrender": True,
             "number_of_decks": 6,
-            "blackjack_multiplier": 1.5,
+            "blackjack_multiplier": 1.5,    # never play a table where this is 1.2 (6:5)
+            "hit_on_soft_17": False,        # dealer standing on soft 17 is better for the player
+            "hit_after_split_aces": False,
+            "double_after_split": True,
+            "double_after_split_aces": False,
+            "early_surrender": False,       # Almost no casino would allow this, it's too good for the player
+            "late_surrender": True,         # Many places actually don't allow this
+            "split_aces": True,
+            "resplit_aces": False,          # Almost no casino lets you resplit aces, it's too good for the player
+            "max_splits": 4,
         }
         for rule, default_value in default_table_rules.items():
             self.table_rules[rule] = self.table_rules.get(rule, default_value)
@@ -33,21 +41,19 @@ class BlackJackTable(object):
         self.number_of_spots = number_of_spots
         self._spots = [{
             "player": None,
-            "hands": [],
+            "hands": [],    # to get the number of splits, we can just take the length of `hands`
         } for _ in range(self.number_of_spots)]
 
-        self._dealer_spot = {
-            "player": Dealer(**self.table_rules),
-            "hand": None,
-        }
+        self._dealer = Dealer(**self.table_rules)
+        self._dealer_hand = None
 
-        self.verbose = verbose
-        self.last_hand = False
+        self._verbose = verbose
+        self._last_hand = False
 
     def __repr__(self):
         os.system('cls||clear')
         out = ""
-        out += f"Dealer: {'' if self._dealer_spot['hand'] is None else self._dealer_spot['hand']}\n"
+        out += f"Dealer: {'' if self._dealer_hand is None else self._dealer_hand}\n"
         out += "-" * 20 + '\n'
         for i, spot in enumerate(self._spots):
             out += f"Spot {i+1}: "
@@ -81,24 +87,24 @@ class BlackJackTable(object):
     """ Dealing and Managing Cards """
 
     def get_dealer_upcard(self):
-        if self._dealer_spot['hand'] is None:
+        if self._dealer_hand is None:
             return None
-        return self._dealer_spot['hand'].cards[0]
+        return self._dealer_hand.cards[0]
     
     def get_dealer_hole_card(self):
-        if self._dealer_spot['hand'] is None:
+        if self._dealer_hand is None:
             return None
-        if len(self._dealer_spot['hand']) < 2:
+        if len(self._dealer_hand) < 2:
             return None
-        return self._dealer_spot['hand'].cards[1]
+        return self._dealer_hand.cards[1]
 
     def get_next_card(self):
         card = self._shoe.deal()
         if card == CutCard():
-            if self.verbose:
+            if self._verbose:
                 print("\nDealer pulled cut card, this is the last hand")
                 input("Press ENTER to continue ")
-            self.last_hand = True
+            self._last_hand = True
             card = self._shoe.deal()
         return card
 
@@ -114,8 +120,9 @@ class BlackJackTable(object):
 
     def _prepare_new_shoe(self):
         self._shoe.shuffle()
-        self._shoe.cut()
+        # self._shoe.cut()
         self._shoe.place_cut_card()
+        self._shoe.burn_card()            # not sure why, but they always burn the first card
 
     def _clear_table(self):
         for spot in self._spots:
@@ -123,9 +130,16 @@ class BlackJackTable(object):
                 continue
             spot['hands'] = []
         
-        self._dealer_spot['hand'] = None
+        self._dealer_hand = None
+
+        if self._verbose:
+            print(self)
+            input("Press ENTER to continue ")
 
     def _initialize_bets_and_hands(self):
+        if self._verbose:
+            print("\nPlayer Bets")
+
         # Initialize players' hands and bets
         for spot in self._spots:
             player = spot['player']
@@ -134,9 +148,8 @@ class BlackJackTable(object):
             
             bet = player.bet()
             if bet < self.table_rules['min_bet']:
-                if self.verbose:
-                    print(f"\n{player.name}'s bet of ${bet} is less than the minimum, they are sitting out this round")
-                    input("Press ENTER to continue ")
+                if self._verbose:
+                    print(f"\t{player.name}'s bet of ${bet} is less than the minimum, they are sitting out this round")
                 player.recieve_chips(bet)
                 continue
             # we are going to ignore this case so it's easier to see the differential
@@ -145,23 +158,28 @@ class BlackJackTable(object):
             #     player.recieve_chips(bet)
             #     continue
             if bet > self.table_rules['max_bet']:
-                if self.verbose:
-                    print(f"\n{player.name} bet over the maximum, the bet of {bet} is being reduced to {self.table_rules['max_bet']}")
-                    input("Press ENTER to continue ")
+                if self._verbose:
+                    print(f"\t{player.name} bet over the maximum, the bet of {bet} is being reduced to {self.table_rules['max_bet']}")
                 player.recieve_chips(bet - self.table_rules['max_bet'])
                 bet = self.table_rules['max_bet']
                 continue
             
-            if self.verbose:
-                print(f"\n{player.name} bets ${bet}")
-                input("Press ENTER to continue ")
+            if self._verbose:
+                print(f"\t{player.name} bets ${bet}")
             player.bet_chips(bet)
             spot['hands'] = [Hand(bet)]
         
         # Initialize dealer's hand
-        self._dealer_spot['hand'] = DealerHand()
+        self._dealer_hand = DealerHand()
+
+        if self._verbose:
+            input("\nPress ENTER to continue ")
 
     def _initial_deal(self):
+        if self._verbose:
+            print("\nDealing initial cards")
+            input("Press ENTER to continue ")
+
         # deal first card to players
         for spot in self._spots:
             if spot['player'] is None or len(spot['hands']) == 0:
@@ -173,7 +191,7 @@ class BlackJackTable(object):
         # deal first card to dealer
         card = self.get_next_card()
         self.show_card(card)
-        self._dealer_spot['hand'].add_card(card)
+        self._dealer_hand.add_card(card)
 
         # deal second cards to players
         for spot in self._spots:
@@ -186,7 +204,61 @@ class BlackJackTable(object):
         # deal second card to dealer
         card = self.get_next_card()
         # DO NOT SHOW, IT IS HIDDEN
-        self._dealer_spot['hand'].add_card(card)
+        self._dealer_hand.add_card(card)
+
+        if self._verbose:
+            print(self)
+            input("Press ENTER to continue ")
+
+    # Insurance and even money are mathematically equivalent 
+    # The only meaningful difference is that insurance forces you to actually bet chips where as even money does not
+    # Therefore, it's possible that you might not have enough chips to buy insurance, but you could still take even money
+    # However you can only take even money if you have BlackJack
+    def _ask_for_insurance_and_even_money(self, dealer_upcard):
+        if self._verbose:
+            print("\nAsking for insurance and even money")
+        
+        for spot in self._spots:
+            player = spot['player']
+            if player is None:
+                continue
+            for hand in spot['hands']:
+                if hand.is_blackjack():
+                    # technically, a player with blackjack could take insurance, but they are mathematically equivalent
+                    # and even money is better in some instances because you don't have to have money to bet
+                    if player.take_even_money(hand, dealer_upcard):
+                       hand.take_even_money()
+                       self._pay_out_player(player, hand.bet, multiplier=2, info="from even money")
+                    else:
+                        if self._verbose:
+                            print(f"\t{player.name} rejects even money")
+                else:
+                    if player.take_insurance(hand, dealer_upcard):
+                        hand.take_insurance()
+                        player.bet_chips(hand.bet // 2)
+                        if self._verbose:
+                            print(f"\t{player.name} took insurance and bets ${hand.bet // 2}")
+                    else:
+                        if self._verbose:
+                            print(f"\t{player.name} rejects insurance")
+        
+        if self._verbose:
+            input("\nPress ENTER to continue ")
+
+    def _pay_out_insurance(self):
+        if self._verbose:
+            print("Paying out insurance and even money")
+        for spot in self._spots:
+            player = spot['player']
+            if player is None:
+                continue
+            for hand in spot['hands']:
+                if hand.insurance:
+                    self._pay_out_player(player, bet=hand.bet//2, multiplier=3, info="from insurance bet")
+                    hand.insurance = False  # I just have to set this so it doesn't display anymore
+        
+        if self._verbose:
+            input("Press ENTER to continue ")
 
     def _resolve_player_spot(self, spot, dealer_upcard):
         player = spot['player']
@@ -198,48 +270,44 @@ class BlackJackTable(object):
 
             for i in range(len(spot['hands'])):
                 hand = spot['hands'][i]
-                self._resolve_player_hand(player, hand, dealer_upcard)
+                self._resolve_player_hand(player, spot, hand, i, dealer_upcard)
 
-                if self.verbose:
-                    print(self)
-                    input("Press ENTER to continue ")
-                
-                # This isn't super elegant, but it works
-                if hand.is_split:
-                    h1 = Hand(hand.bet, hand.cards[0])
-                    h2 = Hand(hand.bet, hand.cards[1])
-                    spot['hands'] = spot['hands'][:i] + [h1, h2] + spot['hands'][i+1:]
-
-                    if self.verbose:
+                # This only occurs if there was a split, in which case, the code just starts over and evaluates hands left-to-right
+                if not hand.is_resolved:
+                    if self._verbose:
                         print(self)
                         input("Press ENTER to continue ")
-                    break
-                if not hand.is_resolved:
                     break
             else:
                 # This only executes if we never break from the for-loop
                 # Thus, all hands must be resolved
                 all_hands_resolved = True
     
-    def _resolve_player_hand(self, player, hand, dealer_card):
+    def _resolve_player_hand(self, player, spot, hand, hand_index, dealer_upcard):
         if hand.is_resolved:
             return
         if hand.is_21():
-            if self.verbose:
+            if self._verbose:
                 print(f"\n{player.name} 21!")
                 input("Press ENTER to continue ")
             hand.resolve()
             return
         if hand.is_busted():
-            if self.verbose:
+            if self._verbose:
                 print(f"\n{player.name} busted :(")
                 input("Press ENTER to continue ")
             hand.resolve()
             return
 
-        allowed_actions = self.get_allowed_player_actions(hand)
-        action = player.action(hand, dealer_card, allowed_actions)
-        if self.verbose:
+        allowed_actions = self.get_allowed_player_actions(hand, number_of_hands=len(spot['hands']))
+        action =  allowed_actions[0] if len(allowed_actions) == 1 else player.action(hand, dealer_upcard, allowed_actions)
+
+        if action not in allowed_actions:
+            if self._verbose:
+                print(f"\n{player.name} wants to {action}, but only {allowed_actions} is allowed. Thus, they will STAND")
+                input("Press ENTER to continue ")
+
+        if self._verbose:
             print(f"\n{player.name}: {action}")
             input("Press ENTER to continue ")
 
@@ -259,193 +327,248 @@ class BlackJackTable(object):
             self.show_card(card)
             hand.add_card(card)
 
+            if self._verbose:
+                print(self)
+                input("Press ENTER to continue ")
             hand.resolve()  # the hand is finished because we doubled
         
         elif action == Action.SPLIT:
             player.bet_chips(hand.bet)  # double the bet
-            hand.split()
+            h1 = Hand(hand.bet, hand.cards[0])
+            h2 = Hand(hand.bet, hand.cards[1])
+            spot['hands'] = spot['hands'][:hand_index] + [h1, h2] + spot['hands'][hand_index+1:]
 
         else:
             raise ValueError(f"Exptected one of {allowed_actions}, instead got {action}")
 
-    def _resolve_dealer_spot(self, dealer_spot):
-        dealer = dealer_spot['player']
-        if dealer is None:
-            return
+    def _resolve_dealer_spot(self):
         
-        hand = dealer_spot['hand']
-        while not hand.is_resolved:
-            self._resolve_dealer_hand(dealer, hand)
+        self._dealer_hand.reveal_hole_card()
+        if self._verbose:
+            print(self)
+            input("Press ENTER to continue ")
+        
+        while not self._dealer_hand.is_resolved:
+            self._resolve_dealer_hand()
 
-            if self.verbose:
+            if self._verbose:
                 print(self)
                 input("Press ENTER to continue ")
 
-    def _resolve_dealer_hand(self, dealer, hand):
-        if hand.is_resolved:
+    def _resolve_dealer_hand(self):
+        if self._dealer_hand.is_resolved:
             return
-        if hand.is_21():
-            if self.verbose:
+        if self._dealer_hand.is_21():
+            if self._verbose:
                 print("\nDealer 21 :(")
                 input("Press ENTER to continue ")
-            hand.resolve()
+            self._dealer_hand.resolve()
             return
-        if hand.is_busted():
-            if self.verbose:
+        if self._dealer_hand.is_busted():
+            if self._verbose:
                 print("\nDealer Bust!")
                 input("Press ENTER to continue ")
-            hand.resolve()
+            self._dealer_hand.resolve()
             return
 
-        allowed_actions = self.get_allowed_dealer_actions(hand)
-        action = dealer.action(hand, allowed_actions)
-        if self.verbose:
-            print(f"\n{dealer.name}: {action}")
+        allowed_actions = self.get_allowed_dealer_actions(self._dealer_hand)
+        action = self._dealer.action(self._dealer_hand, allowed_actions)
+        if self._verbose:
+            print(f"\n{self._dealer.name}: {action}")
             input("Press ENTER to continue ")
 
         if action == Action.STAND:
-            hand.resolve()
+            self._dealer_hand.resolve()
         elif action == Action.HIT:
             card = self.get_next_card()
             self.show_card(card)
-            hand.add_card(card)
+            self._dealer_hand.add_card(card)
         else:
             raise ValueError(f"Exptected one of {allowed_actions}, instead got {action}")
 
-    def get_allowed_player_actions(self, hand):
+    # I had to move this to its over function because it made the logic much easier
+    def _is_split_allowed(self, hand, number_of_hands):
+        if self.table_rules["max_splits"] < 2:
+            return False
+        if hand.cards[0].value != hand.cards[1].value:
+            return False
+        
+        if hand.cards[0].pip == "A":
+            if (number_of_hands == 1) and not self.table_rules['split_aces']:
+                return False
+            if (number_of_hands > 1) and not self.table_rules['resplit_aces']:
+                return False
+        
+        return number_of_hands < self.table_rules["max_splits"]
+
+    def get_allowed_player_actions(self, hand, number_of_hands):
+        # len(hand) == 1 right after splits, the player automatically get another card
+        if len(hand) == 1:
+            return [Action.HIT]
+        
+        # Some casinos only let you get 1 card after splitting aces
+        if number_of_hands > 1 and hand.cards[0].pip == 'A' and (not self.table_rules["hit_after_split_aces"]):
+            return [Action.STAND]
+
         allowed_actions = [Action.STAND, Action.HIT]
         if len(hand) == 2:
-            allowed_actions.append(Action.DOUBLE)
-            if hand.cards[0].value == hand.cards[1].value:
+            
+            # Action.DOUBLE
+            if number_of_hands == 1:                    # if it's our first hand, we can double
+                allowed_actions.append(Action.DOUBLE)
+            elif hand.cards[0].pip != "A":              # we split aces
+                if self.table_rules["double_after_split_aces"]:
+                    allowed_actions.append(Action.DOUBLE)
+            else:                                       # we split something other than an ace
+                if self.table_rules["double_after_split"]:
+                    allowed_actions.append(Action.DOUBLE)
+
+            # Action.SPLIT
+            if self._is_split_allowed(hand, number_of_hands):
                 allowed_actions.append(Action.SPLIT)
+        
         return allowed_actions
 
-    def get_allowed_dealer_actions(self, hand):
+    def get_allowed_dealer_actions(self, dealer_hand):
         return [Action.STAND, Action.HIT]
 
     def _evaluate_spots(self):
-        dealer_hand = self._dealer_spot['hand']
+        if self._verbose:
+            print("\nEvaluating Hands")
+
         for spot in self._spots:
             player = spot['player']
             if player is None:
                 continue
             for hand in spot['hands']:
-                self._evaluate_player_hand(player, hand, dealer_hand)
+                self._evaluate_player_hand(player, hand, self._dealer_hand)
 
-                if self.verbose:
-                    print(self)
-                    input("Press ENTER to continue ")
+        if self._verbose:
+            input("Press ENTER to continue ")
+
+    def _pay_out_player(self, player, bet, multiplier, info="", push=False):
+        player.recieve_chips(int(bet * multiplier))
+        if self._verbose:
+            if multiplier == 1:
+                print(f"\t{player.name} PUSHES {info} (${bet})")
+            else:
+                print(f"\t{player.name} WINS {info} (${bet} * {multiplier})")
 
     def _evaluate_player_hand(self, player, hand, dealer_hand):
-        # If you are dealt a 21 then you win no matter what and get your bet * the multiplyer
-        if len(hand) == 2 and hand.is_21():
-            if self.verbose:
-                    print(f"\n{player.name} has 21! and wins ${int(hand.bet * (1 + self.table_rules['blackjack_multiplier']))}")
-                    input("Press ENTER to continue ")
-            player.recieve_chips(int(hand.bet * (1 + self.table_rules['blackjack_multiplier'])))
+        
+        # Note: BlackJack means you specifically have an A + 10-valued card. This is different than just a 21, which could be K, 5, 6 for example
+        # Note that insurance and even money has already been paid out
+        
+        # If you have BlackJack then you win no matter what (even if the dealer has 21) and get your bet * the multiplyer
+        if hand.is_blackjack():
+            # The only exception is if the dealer also has a BlackJack
+            if dealer_hand.is_blackjack():
+                self._pay_out_player(player, hand.bet, multiplier=1, info=f"{hand.get_comparison_total()} = {dealer_hand.get_comparison_total()}")
+                return
+            
+            # Also, if you took even money, then this was already paid out
+            if hand.even_money:
+                if self._verbose:
+                    print(f"\t{player.name} took even money and was already paid out")
+                return
+
+            self._pay_out_player(player, bet=hand.bet, multiplier=1 + self.table_rules['blackjack_multiplier'], info="from BlackJack")
             return
         
         # If you bust, you lose no matter what (even if the dealer busts)
         if hand.is_busted():
-            if self.verbose:
-                print(f"\n{player.name} busted")
-                input("Press ENTER to continue ")
+            if self._verbose:
+                print(f"\t{player.name} loses by busting :(")
             return
         
         # if you didn't bust, but the dealer does bust, then you win no matter what
         if dealer_hand.is_busted():
-            if self.verbose:
-                print(f"\nDealer busted")
-                input("Press ENTER to continue ")
             if hand.is_doubled:
-                if self.verbose:
-                    print(f"\n{player.name} wins ${hand.bet * 4}")
-                    input("Press ENTER to continue ")
-                player.recieve_chips(hand.bet * 4)
+                self._pay_out_player(player, hand.bet, multiplier=4, info="by dealer bust")
             else:
-                if self.verbose:
-                    print(f"\n{player.name} wins ${hand.bet * 2}")
-                    input("Press ENTER to continue ")
-                player.recieve_chips(hand.bet * 2)
+                self._pay_out_player(player, hand.bet, multiplier=2, info="by dealer bust")
             return
 
         # otherwise, we compare hand totals
         if hand > dealer_hand:      # win
             if hand.is_doubled:
-                if self.verbose:
-                    print(f"\n{player.name} wins ${hand.bet * 4}")
-                    input("Press ENTER to continue ")
-                player.recieve_chips(hand.bet * 4)
+                self._pay_out_player(player, hand.bet*2, multiplier=2, info=f"{hand.get_comparison_total()} > {dealer_hand.get_comparison_total()}")
             else:
-                if self.verbose:
-                    print(f"\n{player.name} wins ${hand.bet * 2}")
-                    input("Press ENTER to continue ")
-                player.recieve_chips(hand.bet * 2)
+                self._pay_out_player(player, hand.bet, multiplier=2, info=f"{hand.get_comparison_total()} > {dealer_hand.get_comparison_total()}")
         elif hand == dealer_hand:   # push
             if hand.is_doubled:
-                if self.verbose:
-                    print(f"\n{player.name} wins ${hand.bet * 2}")
-                    input("Press ENTER to continue ")
-                player.recieve_chips(hand.bet * 2)
+                self._pay_out_player(player, hand.bet*2, multiplier=1, info=f"{hand.get_comparison_total()} = {dealer_hand.get_comparison_total()}", push=True)
             else:
-                if self.verbose:
-                    print(f"\n{player.name} wins ${hand.bet}")
-                    input("Press ENTER to continue ")
-                player.recieve_chips(hand.bet)
+                self._pay_out_player(player, hand.bet, multiplier=1, info=f"{hand.get_comparison_total()} = {dealer_hand.get_comparison_total()}", push=True)
         else:                       # lose
             # We don't need to take away more chips because this was already done
             # When you bet they are subtracted already
-            if self.verbose:
-                print(f"\n{player.name} lost")
-                input("Press ENTER to continue ")
+            if self._verbose:
+                print(f"\t{player.name} LOSES {hand.get_comparison_total()} < {dealer_hand.get_comparison_total()}")
 
     def _play_round(self):
         
         # Initialize Table
         self._clear_table()
-
-        if self.verbose:
-            print(self)
-            input("Press ENTER to continue ")
-        
-        if self.verbose:
-            print("\nPlace your bets")
-            input("Press ENTER to continue ")
         self._initialize_bets_and_hands()
-        
-        if self.verbose:
-            print("\nDealing initial cards")
-            input("Press ENTER to continue ")
         self._initial_deal()
 
-        if self.verbose:
-            print(self)
-            input("Press ENTER to continue ")
+        dealer_upcard = self.get_dealer_upcard()
 
+        # if the dealer shows an A, the players are allowed to take insurance
+        # if the player has a blackjack, then they can take even money (which is mathematically the same as insurance)
+        if dealer_upcard.pip == 'A':
+            if self.table_rules["early_surrender"]:
+                # TODO: implement early surrender
+                pass
+
+            # ask for insurance/even money
+            self._ask_for_insurance_and_even_money(dealer_upcard)
+
+        # if the dealer has an A or any 10-valued card, they check if they have a blackjack
+        if dealer_upcard.pip in ['A', 'T', 'J', 'Q', 'K']:
+            if self._dealer_hand.is_21():
+                
+                self._dealer_hand.reveal_hole_card()
+                if self._verbose:
+                    print(self)
+                    print("Dealer has BlackJack :(")
+                    input("Press ENTER to continue ")
+
+                self._pay_out_insurance()
+                if self._verbose:
+                    print(self)
+                    input("Press ENTER to continue ")
+
+                # No one gets action. Everyone loses unless they were dealt a 21, in which they push
+                self._evaluate_spots()
+                
+                return
+            else:
+                if self._verbose:
+                    print("\nDealer does not have BlackJack!")
+        
+        # Note: If we have reached this point, it means the dealer does not have a BlackJack
+        # Even money is dealt with immediately when the player accepts it and insurance is resolved above
+        # Since the player lost their insurance bet, we don't have to do anything (the chips were already taken)
+        
         # Iterate through players and get their action
-        if self.verbose:
+        if self._verbose:
             print("\nGetting player action")
             input("Press ENTER to continue ")
-        dealer_upcard = self.get_dealer_upcard()
         for spot in self._spots:
             self._resolve_player_spot(spot, dealer_upcard)
 
         # dealer does their action
-        if self.verbose:
+        if self._verbose:
             print("\nGetting dealer action")
             input("Press ENTER to continue ")
-        
-        self._dealer_spot['hand'].reveal_hole_card()
-        if self.verbose:
-            print(self)
-            input("Press ENTER to continue ")
-        
-        self._resolve_dealer_spot(self._dealer_spot)
+        self._resolve_dealer_spot()
         
         # compare player and dealer hands and pay/take bets
         self._evaluate_spots()
 
-        if self.verbose:
+        if self._verbose:
             print(self)
             input("Press ENTER to continue ")
 
@@ -456,12 +579,12 @@ class BlackJackTable(object):
             if round_number > number_of_rounds:
                 break
             
-            if self.last_hand:
-                if self.verbose:
+            if self._last_hand:
+                if self._verbose:
                     print("\nReshuffle")
                     input("Press ENTER to continue ")
                 self._prepare_new_shoe()
-                self.last_hand = False
+                self._last_hand = False
 
                 # let player functions know it's a new show
                 for spot in self._spots:
@@ -477,7 +600,7 @@ class BlackJackTable(object):
 
 if __name__ == "__main__":
     from Players import HumanPlayer, BasicStrategyPlayer, CardCountingPlayer
-    from Shoes import FairShoe
+    from Shoes import FairShoe, StackedShoe
 
     table_rules = {
         "min_bet": 10,
@@ -485,11 +608,13 @@ if __name__ == "__main__":
         "hit_on_soft_17": False,
         "double_after_split": True,
         "late_surrender": True,
-        "number_of_decks": 1,
+        "number_of_decks": 6,
         "blackjack_multiplier": 1.5,
+        "resplit_aces": False,
+        "hit_after_split_aces": True,
     }
 
-    Table = BlackJackTable(shoe=FairShoe(), number_of_spots=8, verbose=True, **table_rules)
+    Table = BlackJackTable(shoe=StackedShoe(), number_of_spots=8, verbose=True, **table_rules)
     print(Table)
     input("Press ENTER to continue ")
 
@@ -498,9 +623,9 @@ if __name__ == "__main__":
 
     CC = CardCountingPlayer(name="CC", chips=0, **table_rules)
     Table.add_player( CC, 5 )
-    Table.add_player( CC, 6 )
+    # Table.add_player( CC, 6 )
 
-    Eric = HumanPlayer(name="Eric", chips=0, **table_rules)
-    Table.add_player( Eric, 3 )
+    # Eric = HumanPlayer(name="Eric", chips=0, **table_rules)
+    # Table.add_player( Eric, 3 )
     
     Table.play()
