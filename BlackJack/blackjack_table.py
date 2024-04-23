@@ -120,7 +120,8 @@ class BlackJackTable(object):
 
     def _prepare_new_shoe(self):
         self._shoe.shuffle()
-        # self._shoe.cut()
+        if self._shoe.name != "Stacked Shoe":   # Stacked Shoe is just used for testing, but it doesn't work if we cut
+            self._shoe.cut()
         self._shoe.place_cut_card()
         self._shoe.burn_card()            # not sure why, but they always burn the first card
 
