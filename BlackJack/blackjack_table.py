@@ -137,9 +137,9 @@ class BlackJackTable(object):
     def _prepare_new_shoe(self):
         self._shoe.shuffle()
         if self._shoe.name != "Stacked Shoe":   # Stacked Shoe is just used for testing, but it doesn't work if we cut
-            self._shoe.cut()
-        self._shoe.place_cut_card()
-        self._shoe.burn_card()            # not sure why, but they always burn the first card
+            self._shoe.cut()                    # cutting is normal dealing procedure specifically to prevent a stacked shoe
+        self._shoe.place_cut_card()             # cut card placed near the end (ideally) to know when to stop dealing (so we don't run out of cards during a hand)
+        self._shoe.deal()                       # burn a card (I'm not sure why this is part of dealing procedure)
 
     def _clear_table(self):
         for spot in self._spots:
@@ -623,9 +623,10 @@ if __name__ == "__main__":
     table_rules = {
         "hit_after_split_aces": True,
         "double_after_split_aces": True,
+        "dealer_peaks_for_blackjack": True,
     }
 
-    Table = BlackJackTable(shoe=StackedShoe(), number_of_spots=8, verbose=True, **table_rules)
+    Table = BlackJackTable(shoe=StackedShoe(StackedShoe.dealer_blackjack_2_player), number_of_spots=8, verbose=True, **table_rules)
     print(Table)
     input("Press ENTER to continue ")
 

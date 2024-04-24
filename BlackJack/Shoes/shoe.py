@@ -52,11 +52,8 @@ class Shoe(object):
         return new_deck
 
     def place_cut_card(self):
-        end_of_shoe_index = int( self._ultilized_percent * len(self.cards) )
+        end_of_shoe_index = int( self._ultilized_percent * len(self.cards) ) + 1
         self.cards.insert(end_of_shoe_index, self.cut_card)
-
-    def burn_card(self):
-        self._c += 1
 
     def deal(self):
         if self._c == len(self.cards):
@@ -76,7 +73,7 @@ class Shoe(object):
         if self.cut_card in self.cards:
             self.cards.remove(self.cut_card)
         self.shuffle_cards()
-        self._check_shuffle()
+        # self._check_shuffle()
         self._c = 0
 
     # Some of the other shuffling functions get complicated. This function makes sure they maintained the deck

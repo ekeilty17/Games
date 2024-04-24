@@ -20,7 +20,7 @@ class Dealer(Player):
         total = hand.get_total()
 
         if hand.is_soft_hand():
-            if total < 6:
+            if total < 7:
                 return Action.HIT
             elif total == 7:
                 return Action.HIT if self.table_rules["hit_on_soft_17"] else Action.STAND

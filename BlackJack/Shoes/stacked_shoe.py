@@ -12,7 +12,7 @@ class StackedShoe(Shoe):
     name = "Stacked Shoe"
 
     super_split_2_player = ["??", "3?", "A?", "6?", "3?", "A?", "6?", "3?", "8?", "7?", "3?", "3?", "3?", "2?", "T?", "K?", "A?", "7?", "5?", "A?", "J?", "A?", "A?", "T?", "A?", "9?"]
-    dealer_blackjack_2_player = ["??", "A?", "3?", "T?", "K?", "Q?", "A?"]
+    dealer_blackjack_2_player = ["??", "A?", "3?", "T?", "K?", "2?", "A?"]
     insurance_and_even_money_2_player = ["??", "A", "6", "A", "9", "K", "Q"]
 
     def __init__(self, stacked_cards, *args, **kwargs):

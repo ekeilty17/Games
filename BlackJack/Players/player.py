@@ -73,13 +73,6 @@ class Player(object):
     # function called to obtain player action for their hand
     def action(self, hand, dealer_upcard, allowed_actions):
         raise NotImplementedError("Not yet implemented...")
-    
-    # I don't feel like implementing these right now
-    # def take_insurance(self):
-    #     pass
-    
-    # def take_even_money(self):
-    #     pass
 
     # function called after a hand with its result
     def see_hand_result(self, result):
